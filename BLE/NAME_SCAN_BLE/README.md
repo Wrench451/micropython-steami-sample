@@ -1,12 +1,3 @@
-Voici ton `README.md` mis à jour pour refléter les derniers changements dans le code, notamment :
-
-- l’ajout du mapping UUID → nom humain,
-- une meilleure lisibilité du journal (log formaté),
-- la suppression de la mention du fallback ADV (qui n’est plus utilisé directement).
-
----
-
-```markdown
 # BLE Central Device Scanner (MicroPython)
 
 This project implements a Bluetooth Low Energy (BLE) Central role using MicroPython. It scans nearby BLE peripherals, connects to each device, and reads all GATT characteristics found in the first service. It attempts to decode the values (e.g., device name, local name) and prints them in a human-readable format.
@@ -109,9 +100,16 @@ _UUID_NAMES = {
 
 ---
 
-## 📂 License
+## 🧠 Tip
 
-MIT License — do what you want with it 🚀
+To add support for more UUIDs (e.g., battery level, heart rate), extend the `_UUID_NAMES` dictionary in the code:
+
+```python
+_UUID_NAMES = {
+    bluetooth.UUID(0x2A00): \"Device Name\",
+    bluetooth.UUID(0x2A01): \"Appearance\",
+    bluetooth.UUID(0x2A04): \"Preferred Connection Parameters\",
+    bluetooth.UUID(0x2AC9): \"Local Name\",
+    bluetooth.UUID(0x2A19): \"Battery Level\",  # example
+}
 ```
-
-Souhaite-tu que je le colle aussi dans un fichier `README.md` dans ton projet sur la canvas ?
