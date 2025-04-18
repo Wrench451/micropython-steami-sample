@@ -17,9 +17,12 @@ _IRQ_GATTC_READ_DONE = const(16)
 _ADV_IND = const(0x00)
 _ADV_DIRECT_IND = const(0x01)
 
-_DEVICE_NAME_UUID = bluetooth.UUID(0x2A00)
-_GENERIC_ACCESS_UUID = bluetooth.UUID(0x1800)
-
+_UUID_NAMES = {
+    bluetooth.UUID(0x2A00): "Device Name",
+    bluetooth.UUID(0x2A01): "Appearance",
+    bluetooth.UUID(0x2A04): "Preferred Connection Parameters",
+    bluetooth.UUID(0x2AC9): "Local Name",
+}
 
 class BLESimpleCentral:
     def __init__(self, ble):
@@ -32,11 +35,10 @@ class BLESimpleCentral:
         self._found_devices = []
         self._seen_addrs = set()
         self._conn_handle = None
-        self._ga_start = None
-        self._ga_end = None
-        self._name_handle = None
+        self._services = []
+        self._characteristics = []
         self._current_device = None
-        self._read_callback = None
+        self._char_index = 0
         self._connect_start = None
 
     def _irq(self, event, data):
@@ -46,75 +48,91 @@ class BLESimpleCentral:
                 addr = bytes(addr)
                 if (addr_type, addr) not in self._seen_addrs:
                     name = decode_name(adv_data) or "?"
+                    services = decode_services(adv_data)
+                    print(f"[SCAN] Found device: {addr_type} {addr} | RSSI: {rssi} | Name: {name} | Services: {services}")
                     self._seen_addrs.add((addr_type, addr))
                     self._found_devices.append((addr_type, addr, name))
 
         elif event == _IRQ_SCAN_DONE:
-            print("Scan complete. Found devices:")
+            print("\n[INFO] Scan complete. Devices found:")
             for addr_type, addr, name in self._found_devices:
-                print("-", addr_type, addr, name)
+                print(f"  - {addr_type} {addr} → {name}")
             if self._found_devices:
                 self._connect_next()
             else:
-                print("No peripherals found.")
+                print("[INFO] No peripherals found.")
 
         elif event == _IRQ_PERIPHERAL_CONNECT:
             conn_handle, addr_type, addr = data
             if self._current_device and addr_type == self._current_device[0] and addr == self._current_device[1]:
                 self._conn_handle = conn_handle
+                self._services = []
+                self._characteristics = []
                 self._ble.gattc_discover_services(conn_handle)
 
         elif event == _IRQ_PERIPHERAL_DISCONNECT:
             conn_handle, _, _ = data
             if conn_handle == self._conn_handle:
-                print(f"Disconnected from {self._current_device[1]}")
+                print(f"[INFO] Disconnected from {self._current_device[1]}\n")
                 self._conn_handle = None
                 self._connect_next()
 
         elif event == _IRQ_GATTC_SERVICE_RESULT:
             conn_handle, start_handle, end_handle, uuid = data
-            if conn_handle == self._conn_handle and uuid == _GENERIC_ACCESS_UUID:
-                self._ga_start = start_handle
-                self._ga_end = end_handle
+            if conn_handle == self._conn_handle:
+                self._services.append((start_handle, end_handle, uuid))
 
         elif event == _IRQ_GATTC_SERVICE_DONE:
-            if self._ga_start and self._ga_end:
-                self._ble.gattc_discover_characteristics(self._conn_handle, self._ga_start, self._ga_end)
+            if self._services:
+                start, end, _ = self._services[0]  # Explore first service only for now
+                self._ble.gattc_discover_characteristics(self._conn_handle, start, end)
             else:
                 self._ble.gap_disconnect(self._conn_handle)
 
         elif event == _IRQ_GATTC_CHARACTERISTIC_RESULT:
             conn_handle, def_handle, value_handle, properties, uuid = data
-            if conn_handle == self._conn_handle and uuid == _DEVICE_NAME_UUID:
-                self._name_handle = value_handle
+            if conn_handle == self._conn_handle:
+                self._characteristics.append((value_handle, uuid))
 
         elif event == _IRQ_GATTC_CHARACTERISTIC_DONE:
-            if self._name_handle:
-                self.read_name(self._read_callback)
+            if self._characteristics:
+                self._char_index = 0
+                self._read_next_characteristic()
             else:
-                print(f"[GATT] {self._current_device[1]}: No name characteristic found.")
+                print("[WARN] No characteristics found.")
                 self._ble.gap_disconnect(self._conn_handle)
 
         elif event == _IRQ_GATTC_READ_RESULT:
             conn_handle, value_handle, char_data = data
-            if self._read_callback:
-                self._read_callback(self._current_device, char_data)
+            try:
+                decoded = bytes(char_data).decode().strip()
+                print(f"[CHAR] Handle: {value_handle} → \"{decoded}\"")
+            except:
+                print(f"[CHAR] Handle: {value_handle} → {char_data}")
 
         elif event == _IRQ_GATTC_READ_DONE:
-            conn_handle, value_handle, status = data
-            self._ble.gap_disconnect(conn_handle)
+            self._char_index += 1
+            self._read_next_characteristic()
+
+    def _read_next_characteristic(self):
+        if self._char_index < len(self._characteristics):
+            handle, uuid = self._characteristics[self._char_index]
+            uuid_name = _UUID_NAMES.get(uuid, str(uuid))
+            print(f"[READ] Characteristic {self._char_index + 1}/{len(self._characteristics)} | UUID: {uuid_name}")
+            self._ble.gattc_read(self._conn_handle, handle)
+        else:
+            self._ble.gap_disconnect(self._conn_handle)
 
     def _connect_next(self):
         if not self._found_devices:
-            print("All devices tested.")
+            print("[DONE] All devices tested.")
             return
-        self._ga_start = None
-        self._ga_end = None
-        self._name_handle = None
+        self._services = []
+        self._characteristics = []
         self._conn_handle = None
         self._current_device = self._found_devices.pop(0)
         addr_type, addr, name = self._current_device
-        print(f"Connecting to {addr_type} {addr} ({name})...")
+        print(f"\n[CONNECT] Connecting to {addr_type} {addr} ({name})...")
         self._connect_start = time.ticks_ms()
         self._ble.gap_connect(addr_type, addr)
 
@@ -122,37 +140,16 @@ class BLESimpleCentral:
         self._reset()
         self._ble.gap_scan(10000, 30000, 30000, True)
 
-    def read_name(self, callback):
-        self._read_callback = callback
-        if self._name_handle:
-            self._ble.gattc_read(self._conn_handle, self._name_handle)
-        else:
-            # fallback: print the name from advertisement
-            if self._current_device:
-                addr_type, addr, adv_name = self._current_device
-                print(f"[ADV] {addr_type} {addr}: {adv_name}")
-            self._ble.gap_disconnect(self._conn_handle)
-
 
 def demo():
     ble = bluetooth.BLE()
     central = BLESimpleCentral(ble)
-
-    def on_name_read(device, name_bytes):
-        addr_type, addr, adv_name = device
-        try:
-            name = name_bytes.decode()
-            print(f"[GATT] {addr_type} {addr}: {name}")
-        except:
-            print(f"[GATT] {addr_type} {addr}: Failed to decode name")
-
-    central._read_callback = on_name_read
     central.scan()
 
     while True:
         if central._current_device and central._conn_handle is None and central._connect_start:
             if time.ticks_diff(time.ticks_ms(), central._connect_start) > 5000:
-                print("Connection timeout, skipping...")
+                print("[TIMEOUT] Connection timeout, skipping...\n")
                 try:
                     central._ble.gap_disconnect(0)
                 except:
