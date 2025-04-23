@@ -11,11 +11,16 @@ This may be due to a missing or incompatible BLE firmware on your STM32WB chip.
 
 #### ✅ Solution:
 
-Flash the following firmware:
-[`stm32wb5x_BLE_HCILayer_extended_fw.bin` (v1.21.0)](https://github.com/STMicroelectronics/STM32CubeWB/blob/v1.21.0/Projects/STM32WB_Copro_Wireless_Binaries/STM32WB5x/stm32wb5x_BLE_HCILayer_extended_fw.bin)
+To resolve this issue, you need to update the wireless stack of your STeaMi device. Follow these steps:
 
-- Load address: `0x080DA000` *(for STM32WB5xxG with 1MB Flash)*
-- Once flashed, BLE should activate without issues:
+1. Visit the following website to download and update the wireless stack:  
+   [Update STeaMi Wireless Stack](https://steamicc.github.io/steami-tools/webusb-wireless-stack/index.html)
+
+2. On the site, you will find the necessary tools and instructions to update the firmware and the BLE stack on your STM32WB device.
+
+3. Once updated, you should be able to activate BLE without any issues.
+
+After flashing the firmware, BLE should activate without issues:
 
 ```python
 >>> from bluetooth import BLE
@@ -23,4 +28,4 @@ Flash the following firmware:
 True
 ```
 
-This fixes the BLE activation timeout on the NUCLEO_WB55 board.
+This will fix the BLE activation timeout issue on the STeaMi board.
