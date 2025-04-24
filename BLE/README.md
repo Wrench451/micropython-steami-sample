@@ -1,4 +1,4 @@
-### 🛠 BLE Timeout Issue on NUCLEO-WB55
+### 🛠 BLE Timeout Issue on STeaMi
 
 If you encounter a **timeout or failure** when calling:
 
