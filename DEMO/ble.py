@@ -28,7 +28,7 @@ async def ble_menu():
         elif btn == "B":
             ble_index += 1
         elif btn == "MENU":
-            if ble[ble_index] == "Exit":
+            if ble[ble_index] == "EXIT":
                 break
             await run_ble(ble_index)
         if ble_index >= len(ble) : ble_index = 0
