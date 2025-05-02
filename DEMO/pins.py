@@ -9,7 +9,6 @@ from vl53l1x import VL53L1X
 from hts221 import HTS221
 from apds9960 import uAPDS9960 as APDS9960
 
-
 LED_RED = Pin("LED_RED", Pin.OUT_PP)
 LED_GREEN = Pin("LED_GREEN", Pin.OUT_PP)
 LED_BLUE = Pin("LED_BLUE", Pin.OUT_PP)
