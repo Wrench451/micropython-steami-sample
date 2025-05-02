@@ -7,6 +7,9 @@ ble = ["RECEIVE", "EMIT", "EXIT"]
 async def run_ble(ble_index):
     if ble_index == 0:
         print("BLE RECEIVE")
+        display.fill(0)
+        display.text("BLE SCAN ... ", 25, 70, 255)
+        display.show()
         results = await ble_receive()
         await display_receive(results)
     elif ble_index == 1:
@@ -38,7 +41,7 @@ async def ble_menu():
 async def ble_receive():
     print("START BLE SCAN")
     results = []
-    async with aioble.scan(300, interval_us=30000, window_us=30000) as scanner:
+    async with aioble.scan(1000, interval_us=30000, window_us=30000) as scanner:
         async for result in scanner:
             results.append(result)
     
