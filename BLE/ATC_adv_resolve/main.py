@@ -7,9 +7,6 @@ MAC_ADDRESS_FILTER = "A4:C1:38" #:3F:19:D6"
 
 collected_data = []
 
-# def _decode_data(data):
-#     return struct.unpack("<h", data)[0] / 100
-
 def _decode_humidity(data):
     data = data[3:5]
     return struct.unpack("<h", data)[0] / 100
