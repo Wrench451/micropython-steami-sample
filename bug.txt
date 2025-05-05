@@ -1,1 +1,0 @@
-Ampy has trouble flashing files larger than 2KB to the STeaMi board, often resulting in incomplete transfers or errors. However, using Thonny as an alternative works reliably for flashing larger files, even though Thonny might not be the most practical tool for some workflows.
