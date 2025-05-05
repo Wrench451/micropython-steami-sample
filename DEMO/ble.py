@@ -1,6 +1,13 @@
 import aioble
+import uasyncio as asyncio
+import bluetooth
+from aioble import peripheral
 
 from pins import *
+
+ble = bluetooth.BLE()
+ble.active(True)
+aioble.config(gap_name="STeaMi")
 
 ble = ["RECEIVE", "EMIT", "EXIT"]
 
@@ -14,7 +21,7 @@ async def run_ble(ble_index):
         await display_receive(results)
     elif ble_index == 1:
         print("BLE EMIT")
-        ble_emit()
+        await ble_emit()
     elif ble_index == 2:    
         return
 
@@ -45,10 +52,18 @@ async def ble_receive():
         async for result in scanner:
             results.append(result)
     
-    return results
     print("END BLE SCAN")
+    # Remove duplicate MAC addresses
+    unique_results = []
+    seen_addresses = set()
+    for result in results:
+        mac_address = tuple(result.device.addr)
+        if mac_address not in seen_addresses:
+            seen_addresses.add(mac_address)
+            unique_results.append(result)
+    results = unique_results
+    return results
     
-
 async def display_receive(results):
     print("BLE SCAN RESULTS")
     
@@ -82,25 +97,36 @@ async def display_receive(results):
         if result_index >= len(results) : result_index = 0
         elif result_index < 0 : result_index = len(results) - 1
 
+def make_payload(name="STeaMi"):
+    name_bytes = name.encode()
+    payload = bytearray()
+    payload += bytes((2, 0x01, 0x06))  # Flags
+    payload += bytes((len(name_bytes) + 1, 0x09)) + name_bytes  # Complete local name
+    return payload
 
 async def ble_emit():
     print("BLE EMIT")
     print("A to SEND | MENU to EXIT")
     iteration = 0
+    peripheral()
     while True:
         btn = await wait_for_button()
-        if btn == "A":
-            async with await aioble.advertise(
-                3000,
-                name="STeaMi",
-                payload=b"Hello World",
-                interval_us=30000,
-                timeout_ms=5000) as adv:
 
-                print("Advertising...")
-                await adv.advertise()
+        if btn == "A":
+            print(f"[{iteration}] Advertising...")
+            try:
+                await aioble.advertise(
+                    interval_us=300_000,
+                    adv_data=make_payload(),
+                    timeout_ms=10000
+                )
                 print("Advertising done")
-                iteration += 1
+            except Exception as e:
+                print("Advertising failed:", repr(e))
+            iteration += 1
+
         elif btn == "MENU":
+            print("Exiting BLE EMIT.")
             break
+
         print("A to SEND | MENU to EXIT")
