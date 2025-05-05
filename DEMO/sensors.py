@@ -5,8 +5,8 @@ from time import sleep
 def display_sensor():
     display.fill(0)
     display.text("SENSORS", 45, 20)
-    display.text(f"Temp: {round(SENSOR.humidity(), 1)} C", 5, 40)
-    display.text(f"Humid: {round(SENSOR.temperature(), 1)} %", 5, 50)
+    display.text(f"Temp: {round(SENSOR.temperature(), 1)} C", 5, 40)
+    display.text(f"Humid: {round(SENSOR.humidity(), 1)} %", 5, 50)
     display.text(f"Dist: {DISTANCE.read()}mm", 5, 60)
     display.text(f"Lum: {apds.readAmbientLight()}mm", 5, 70)
     display.show()
