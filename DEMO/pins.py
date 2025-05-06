@@ -35,13 +35,13 @@ display = ssd1327.WS_OLED_128X128_SPI(spi, dc, res, cs)
 async def wait_for_button():
     while True:
         if A_BUTTON.value() == 0:
-            sleep(0.2)
+            await asyncio.sleep(0.2)
             return "A"
         elif B_BUTTON.value() == 0:
-            sleep(0.2)
+            await asyncio.sleep(0.2)
             return "B"
         elif MENU_BUTTON.value() == 0:
-            sleep(0.2)
+            await asyncio.sleep(0.2)
             return "MENU"
         await asyncio.sleep(0.1)
 

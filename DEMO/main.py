@@ -33,11 +33,13 @@ async def run_menu(menu_index):
 
 async def main_menu():
     menu_index = 0
-    display_menu("MENU", menu, menu_index)
 
     while True:
+        display_menu("MENU", menu, menu_index)
         print(f"> {menu[menu_index]}")
+
         btn = await wait_for_button()
+
         if btn == "A":
             menu_index -= 1
         elif btn == "B":
@@ -45,10 +47,10 @@ async def main_menu():
         elif btn == "MENU":
             await run_menu(menu_index)
             print("--- MAIN ---")
+        
         if menu_index >= len(menu):
             menu_index = 0
         elif menu_index < 0:
             menu_index = len(menu) - 1
-        display_menu("MENU", menu, menu_index)
 
 asyncio.run(main_menu())

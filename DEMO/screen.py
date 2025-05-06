@@ -143,8 +143,8 @@ def show_screens(index):
 async def screen_menu():
     print("--- SCREEN ---")
     screen_index = 0
-    display_menu("SCREEN", screens, screen_index)
     while True:
+        display_menu("SCREEN", screens, screen_index)
         btn = await wait_for_button()
         if btn == "A":
             print("A")
@@ -160,4 +160,3 @@ async def screen_menu():
             
         if screen_index >= len(screens) : screen_index = 0
         elif screen_index < 0 : screen_index = len(screens) - 1
-        display_menu("SCREEN", screens, screen_index)

@@ -14,6 +14,7 @@ def run_led(led_index):
         toggle(LED_GREEN)
     elif led_index == 3:
         return 
+
 def toggle(pin):
     pin.value(not pin.value())
 
@@ -21,10 +22,11 @@ async def led_menu():
     print("--- LED ---")
 
     led_index = 0
-    display_menu("LED", leds, led_index)
 
     while True:
+        display_menu("LED", leds, led_index)
         print(f"> {leds[led_index]}")
+
         joystick_move = await wait_for_button()
         if joystick_move == "A":
             led_index -= 1
@@ -37,4 +39,3 @@ async def led_menu():
             
         if led_index >= len(leds) : led_index = 0
         elif led_index < 0 : led_index = len(leds) - 1
-        display_menu("LED", leds, led_index)

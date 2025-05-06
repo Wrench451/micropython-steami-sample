@@ -1,5 +1,4 @@
 from pins import *
-from time import sleep
 import time
 import math
 

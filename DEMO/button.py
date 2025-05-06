@@ -1,5 +1,4 @@
 from pins import *
-from time import sleep
 
 button_menu = ["A", "B", "MENU"]
 
@@ -15,6 +14,7 @@ async def button_menu():
     display.show()
 
     print("--- BUTTON ---")
+    
     while True:
         joystick_move = await wait_for_button()
         if joystick_move == "A":
