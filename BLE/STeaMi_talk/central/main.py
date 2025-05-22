@@ -3,63 +3,127 @@ import asyncio
 import machine
 import ubinascii
 import aioble
+import bluetooth
+import struct
 
 from pins import *
 
-# Create a unique device name based on the MAC address
+# BLE UUIDs
+_ENV_SENSE_UUID = bluetooth.UUID(0x181A)
+_ENV_SENSE_TEMP_UUID = bluetooth.UUID(0x2A6E)
+
+# Identité unique du périphérique
 uid = machine.unique_id()
 mac_str = ubinascii.hexlify(uid, ':').decode().upper()
 mac_suffix = mac_str[-6:].replace(":", "").upper()
 device_name = f"STeaMi-{mac_suffix}"
 
-# To navigate the device list
-STeaMi_founded = []
-STeaMi_index = 0
+# Variables globales
+discovered_devices = []         # Liste de ScanResult
+selected_index = 0              # Index de sélection dans le menu
+scan_active = True              # Scan actif ou non
+active_connection = None        # Connexion BLE actuelle
 
-# display everything on the screen
+# Tâche d'affichage principal
 async def display_task():
-    global STeaMi_index, STeaMi_founded, device_name
+    global selected_index, discovered_devices
     while True:
-        display.fill(0)
-        display.text(device_name, text_x_center_position(device_name), 20, 255)
-        display_menu(STeaMi_founded, STeaMi_index)
-        display.show()
-        await asyncio.sleep(0.1)  # if don't sleep, the scan task will not work
+        if scan_active:
+            display.fill(0)
+            display.text(device_name, text_x_center_position(device_name), 20, 255)
+            display_menu(discovered_devices, selected_index)
+            display.show()
+        await asyncio.sleep(0.2)
 
-# Task to handle the index of the connected devices
+# Tâche de gestion des boutons
 async def button_task():
-    global devices_index, connected_devices
+    global selected_index, discovered_devices, scan_active, active_connection
     while True:
         button = await wait_for_button()
-        if button == "A":
-            devices_index = (devices_index + 1) % len(connected_devices)
-        elif button == "B":
-            devices_index = (devices_index - 1) % len(connected_devices)
+        if button == "A" and discovered_devices:
+            selected_index = (selected_index + 1) % len(discovered_devices)
+        elif button == "B" and discovered_devices:
+            selected_index = (selected_index - 1) % len(discovered_devices)
         elif button == "MENU":
-            # Handle menu action here
-            pass
+            if scan_active:
+                # Passage en mode connecté
+                scan_active = False
+                selected = discovered_devices[selected_index]
+                print(f"Trying to connect to {selected.name()} @ {selected.device.addr_hex()}")
+                asyncio.create_task(connect_to_device(selected.device, selected.name()))
+            else:
+                # Repassage en mode scan + déconnexion
+                if active_connection:
+                    print("Disconnecting...")
+                    await active_connection.disconnect()
+                    active_connection = None
+                scan_active = True
         await asyncio.sleep(0.1)
 
+# Connexion à un périphérique BLE
+async def connect_to_device(device, name):
+    global active_connection, scan_active
+
+    try:
+        print("Connecting...")
+        connection = await device.connect(timeout_ms=5000)
+        active_connection = connection
+    except asyncio.TimeoutError:
+        print("Connection timeout")
+        scan_active = True
+        return
+
+    async with connection:
+        try:
+            service = await connection.service(_ENV_SENSE_UUID)
+            characteristic = await service.characteristic(_ENV_SENSE_TEMP_UUID)
+        except Exception as e:
+            print("Service discovery failed:", e)
+            scan_active = True
+            return
+
+        while connection.is_connected() and not scan_active:
+            try:
+                raw = await characteristic.read()
+                distance_mm = struct.unpack("<h", raw)[0]
+                print("Distance:", distance_mm)
+
+                display.fill(0)
+                display.text(name, text_x_center_position(name), 20, 255) 
+                display.text(f"{distance_mm} mm", text_x_center_position(f"{distance_mm} mm"), 60, 255)
+                display.show()
+            except Exception as e:
+                print("Read error:", e)
+                break
+
+            await asyncio.sleep(1)
+
+        print("Disconnected from device")
+        active_connection = None
+        scan_active = True
+
+# Scan BLE pour les périphériques STeaMi
 async def scan_task():
+    global discovered_devices
     while True:
-        print("---Starting Scan---")
-        STeaMi_founded.clear()
-        async with aioble.scan(500, interval_us=30000, window_us=30000, active=True) as scanner:
-            async for result in scanner:
-                name = result.name()
-                if name and name.startswith("STeaMi"):
-                    print(f"=> Found sensor : {name}")
-                    if name not in STeaMi_founded:
-                        STeaMi_founded.append(name)
-        await asyncio.sleep(1)
+        if scan_active:
+            print("--- Starting Scan ---")
+            discovered_devices.clear()
+            async with aioble.scan(1000, interval_us=30000, window_us=30000, active=True) as scanner:
+                async for result in scanner:
+                    name = result.name()
+                    if name and name.startswith("STeaMi"):
+                        if result.device not in [d.device for d in discovered_devices]:
+                            print(f"Found: {name}")
+                            discovered_devices.append(result)
+        await asyncio.sleep(0.)
 
-# asyncio.run(scan_task())
-
-# Runs the main tasks concurrently
+# Démarrage des tâches principales
 async def main():
-    t1 = asyncio.create_task(scan_task())
-    t3 = asyncio.create_task(display_task())
-    t4 = asyncio.create_task(button_task())
-    await asyncio.gather(t1, t3,t4)
+    await asyncio.gather(
+        scan_task(),
+        display_task(),
+        button_task()
+    )
 
 asyncio.run(main())
