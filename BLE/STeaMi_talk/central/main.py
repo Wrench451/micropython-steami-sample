@@ -13,10 +13,12 @@ _ENV_SENSE_UUID = bluetooth.UUID(0x181A)
 _ENV_SENSE_TEMP_UUID = bluetooth.UUID(0x2A6E)
 
 # Identité unique du périphérique
-uid = machine.unique_id()
-mac_str = ubinascii.hexlify(uid, ':').decode().upper()
-mac_suffix = mac_str[-6:].replace(":", "").upper()
+ble = bluetooth.BLE()
+ble.active(True)
+mac_bytes = ble.config('mac')[1]
+mac_suffix = ''.join(f'{b:02X}' for b in mac_bytes[-2:])
 device_name = f"STeaMi-{mac_suffix}"
+print("Device name:", device_name)
 
 # Variables globales
 discovered_devices = []         # Liste de ScanResult

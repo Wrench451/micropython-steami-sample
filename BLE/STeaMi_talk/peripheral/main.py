@@ -9,10 +9,12 @@ import struct
 from pins import *
 
 # Create a unique device name based on the MAC address
-uid = machine.unique_id()
-mac_str = ubinascii.hexlify(uid, ':').decode().upper()
-mac_suffix = mac_str[-6:].replace(":", "").upper()
+ble = bluetooth.BLE()
+ble.active(True)
+mac_bytes = ble.config('mac')[1]
+mac_suffix = ''.join(f'{b:02X}' for b in mac_bytes[-2:])
 device_name = f"STeaMi-{mac_suffix}"
+print("Device name:", device_name)
 
 # current distance 
 distance = 0
