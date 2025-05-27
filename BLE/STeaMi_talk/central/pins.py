@@ -46,12 +46,12 @@ async def wait_for_button():
 
 def display_menu(devices, index):
     if not devices:
-        display.text("No device", text_x_center_position("No Device"), 60, 255)
+        display.text("No device", text_x_center_position("No Device"), 50, 255)
         return
     for i, d in enumerate(devices):
         name = d.name() if hasattr(d, 'name') else str(d)
         text = f"> {name}" if i == index else f"  {name}"
-        display.text(text, 15, 45 + 10 * i, 255)
+        display.text(text, 15, 50 + 10 * i, 255)
 
 
 def text_x_center_position(text):

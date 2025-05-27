@@ -45,10 +45,13 @@ async def wait_for_button():
         await asyncio.sleep(0.1)
 
 def display_menu(list, index):
+    if not list:
+        display.text("No device ", text_x_center_position("No Device"), 65, 255)
+        return
     for i, item in enumerate(list):
         if i == index:
-            display.text(">", 25, ((i + 1) * 10)+50, 255)
-        display.text(item , 35, ((i + 1) * 10)+50, 255)
+            display.text(">", 15, ((i + 1) * 10)+65, 255)
+        display.text(item , 25, ((i + 1) * 10)+65, 255)
 
 def text_x_center_position(text):
     x_position = (128 - (len(text) * 8) ) // 2 # Center the text
