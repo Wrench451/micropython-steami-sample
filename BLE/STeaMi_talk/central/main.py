@@ -1,7 +1,5 @@
 from micropython import const
 import asyncio
-import machine
-import ubinascii
 import aioble
 import bluetooth
 import struct
@@ -35,7 +33,7 @@ async def display_task():
             display.text(device_name, text_x_center_position(device_name), 20, 255)
             display_menu(discovered_devices, selected_index)
             display.show()
-        await asyncio.sleep(0.2)
+        await asyncio.sleep(0.1)
 
 # Tâche de gestion des boutons
 async def button_task():
@@ -48,6 +46,9 @@ async def button_task():
             selected_index = (selected_index - 1) % len(discovered_devices)
         elif button == "MENU":
             if scan_active:
+                if not discovered_devices:
+                    print("No devices found to connect.")
+                    continue
                 # Passage en mode connecté
                 scan_active = False
                 selected = discovered_devices[selected_index]
@@ -110,14 +111,16 @@ async def scan_task():
     while True:
         if scan_active:
             print("--- Starting Scan ---")
-            discovered_devices.clear()
+            # discovered_devices.clear()
+            devices = []
             async with aioble.scan(1000, interval_us=30000, window_us=30000, active=True) as scanner:
                 async for result in scanner:
                     name = result.name()
                     if name and name.startswith("STeaMi"):
-                        if result.device not in [d.device for d in discovered_devices]:
+                        if result.device not in [d.device for d in devices]:
                             print(f"Found: {name}")
-                            discovered_devices.append(result)
+                            devices.append(result)
+            discovered_devices = devices
         await asyncio.sleep(0.)
 
 # Démarrage des tâches principales
