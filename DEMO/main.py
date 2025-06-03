@@ -13,7 +13,7 @@ from gesture import *
 from screen import *
 
 
-menu = ["LED", "BUTTON", "BUZZER","SENSORS","GESTURE","SCREEN","BLE"]
+menu = ["LED", "BUTTON", "BUZZER","SENSORS","SCREEN","BLE"]
 
 async def run_menu(menu_index):
     if menu_index == 0:
@@ -25,10 +25,8 @@ async def run_menu(menu_index):
     elif menu_index == 3:
         await sensor_menu()
     elif menu_index == 4:
-        await gesture_menu()
-    elif menu_index == 5:
         await screen_menu()
-    elif menu_index == 6:
+    elif menu_index == 5:
         await ble_menu()
 
 async def main_menu():
