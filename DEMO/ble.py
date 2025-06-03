@@ -4,6 +4,7 @@ import bluetooth
 from aioble import peripheral
 
 from pins import *
+from advertizing import *
 
 ble = bluetooth.BLE()
 ble.active(True)
@@ -21,7 +22,8 @@ async def run_ble(ble_index):
         await display_receive(results)
     elif ble_index == 1:
         print("BLE EMIT")
-        await ble_emit()
+        await run_ble_adv()
+        await asyncio.sleep(0.2)
     elif ble_index == 2:    
         return
 
