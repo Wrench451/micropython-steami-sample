@@ -1,7 +1,3 @@
-Parfait ! Voici une version du `README.md` mise à jour pour utiliser **`mpremote`**, qui est l’outil recommandé par MicroPython pour interagir avec les microcontrôleurs.
-
----
-
 # MicroPython STEAMI Sample
 
 A collection of MicroPython sample scripts for the **STM32WB55** microcontroller. These examples demonstrate a wide range of features such as LED control, button input, BLE communication, sensor reading, display management, and simple games — ideal for STEAM education and embedded experimentation.
@@ -78,19 +74,3 @@ Each folder contains example `.py` scripts you can run directly on your STM32WB5
 * `BLE/advertiser.py` — advertise as BLE device
 * `SCREEN/oled_demo.py` — print to OLED screen
 * `GAME/dinoSteam.py` — a simple built-in game
-
----
-
-## 📄 License
-
-This project is licensed under the [MIT License](LICENSE).
-
----
-
-## 🤝 Contributions
-
-Feel free to contribute by submitting pull requests, improving examples, or reporting issues!
-
----
-
-Let me know if you'd like a `requirements.txt`, setup guide for firmware flashing, or a README translation!
