@@ -21,7 +21,7 @@ delay = 0.5
 def blink_led(led, couleur):
     display.fill(0)
     draw_text(display, "LED Allumée(s) :", 50)
-    draw_text(display, f"- {couleur}", 70)
+    draw_text(display, f"- LED {couleur}", 70)
     display.show()
 
     led.on()
@@ -33,8 +33,8 @@ def blink_led(led, couleur):
 def blink_two_leds(led1, led2, couleur1, couleur2):
     display.fill(0)
     draw_text(display, "LED Allumée(s) :", 50)
-    draw_text(display, f"- {couleur1}", 70)
-    draw_text(display, f"- {couleur2}", 80)
+    draw_text(display, f"- LED {couleur1}", 70)
+    draw_text(display, f"- LED{couleur2}", 80)
     display.show()
 
     led1.on()
@@ -91,13 +91,13 @@ def draw_text(display, text, y_start, screen_width=128, char_width=8, line_heigh
     display.text(line.rstrip(), x, y)
 
 while True:
-    blink_led(led_red, "LED Rouge")
-    blink_led(led_green, "LED Vert")
-    blink_led(led_blue, "LED Bleu")
+    blink_led(led_red, "Rouge")
+    blink_led(led_green, "Vert")
+    blink_led(led_blue, "Bleu")
 
-    blink_two_leds(led_red, led_green, "LED Rouge", "LED Vert")
-    blink_two_leds(led_red, led_blue, "LED Rouge", "LED Bleu")
-    blink_two_leds(led_green, led_blue, "LED Vert", "LED Bleu")
+    blink_two_leds(led_red, led_green, "Rouge", "Vert")
+    blink_two_leds(led_red, led_blue, "Rouge", "Bleu")
+    blink_two_leds(led_green, led_blue, "Vert", "Bleu")
 
     blink_all_leds()
 
