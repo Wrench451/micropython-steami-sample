@@ -125,6 +125,3 @@ async def buzzer_menu():
         if sounds_index >= len(sounds) : sounds_index = 0
         elif sounds_index < 0 : sounds_index = len(sounds) - 1
         display_menu("BUZZER", sounds, sounds_index)
-
-# Lancer le menu
-asyncio.run(buzzer_menu())
