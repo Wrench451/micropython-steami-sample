@@ -2,26 +2,22 @@ import bluetooth
 import uasyncio as asyncio
 import aioble
 import struct
-from time import ticks_ms, ticks_diff
-from pins import *  # Assure-toi que DISTANCE et display sont bien définis ici
+from time import ticks_ms
+from pins import *
 
-# === Initialisation BLE ===
 ble = bluetooth.BLE()
 ble.active(True)
 
-# mac_bytes = ble.config('mac')[1]
-# mac_suffix = ''.join(f'{b:02X}' for b in mac_bytes[-2:])
-device_name = f"STeaMi-R" #-{mac_suffix}"
+device_name = f"STeaMi-R"
 print("Device name:", device_name)
 
-# === Paramètres du BLE ===
-SCAN_DURATION = 500  # Durée de la recherche en ms
-ADV_TIMEOUT = 500  # Durée de l'annonce en ms
+SCAN_DURATION = 500
+ADV_TIMEOUT = 500
 
-# === Données locales et des autres appareils ===
-devices_distances = {}  # {device_name: (distance, last_seen_ms)}
+devices_distances = {}
+energy_current = 0
+forwarded_distance = None
 
-# === Fonctions auxiliaires ===
 def advertising_payload(name=None, manufacturer_data=None):
     payload = bytearray()
     if name:
@@ -46,8 +42,8 @@ def extract_manufacturer_data(adv_bytes):
 def text_x_center(text):
     return max((128 - len(text) * 8) // 2, 0)
 
-# === Tâches ===
 async def ble_task():
+    global forwarded_distance
     while True:
         print("BLE Task: Starting scan...")
         async with aioble.scan(SCAN_DURATION, interval_us=30000, window_us=30000, active=True) as scanner:
@@ -61,18 +57,17 @@ async def ble_task():
                         devices_distances[name] = (distance, ticks_ms())
                         print(f"Received from {name}: {distance} cm")
                         if name.startswith("STeaMi-S"):
-                            forwarded_distance = distance  # <== distance captée à republier
-                            
-        # purge_old_devices()
-        await asyncio.sleep_ms(SCAN_DURATION+50)
+                            forwarded_distance = distance
+
+        await asyncio.sleep_ms(SCAN_DURATION + 50)
 
         print("BLE Task: Advertising...")
         if forwarded_distance is not None:
             if forwarded_distance > 300:
-                man_data = struct.pack("b", 0)  # Commande LED OFF
+                man_data = struct.pack("b", 0)
                 LED_RED.on()
             else:
-                man_data = struct.pack("b", 1)  # Commande LED ON
+                man_data = struct.pack("b", 1)
                 LED_GREEN.on()
             adv_payload = advertising_payload(name=device_name, manufacturer_data=man_data)
             try:
@@ -85,41 +80,44 @@ async def ble_task():
                 print("Advertisement done.")
             except asyncio.TimeoutError:
                 print("Advertisement timeout (non-connectable).")
+                pass
             finally:
                 LED_RED.off()
                 LED_GREEN.off()
-                forwarded_distance = None  # Reset after advertising
-
+                forwarded_distance = None
             await asyncio.sleep_ms(200)
+
+async def energy_task():
+    global energy_current
+    while True:
+        energy_current = fg.current_average()
+        await asyncio.sleep(1)
 
 async def display_task():
     while True:
         display.fill(0)
+        display.text(device_name, text_x_center(device_name), 10, 255)
 
-        # Nom de l'appareil + distance locale
-        display.text(device_name, text_x_center(device_name), 20, 255)
-
-        # Affichage des appareils les plus récemment vus
         recent_devices = sorted(
             devices_distances.items(),
-            key=lambda item: item[1][1],  # tri par last_seen_ms
+            key=lambda item: item[1][1],
             reverse=True
-        )[:4]
+        )[:3]
 
-        y = 50
+        y = 30
         for name, (dist, _) in recent_devices:
             display.text(f"{name[-4:]}: {dist}", text_x_center("XXXX: XXX"), y, 255)
             y += 10
 
+        display.text(f"I: {energy_current:.1f} mA", text_x_center("I: XXXXX"), y + 5, 255)
         display.show()
-        await asyncio.sleep(0.2)
-
-# === Programme principal ===
+        await asyncio.sleep(0.5)
 
 async def main():
     await asyncio.gather(
         ble_task(),
-        display_task()
+        display_task(),
+        energy_task()
     )
 
 asyncio.run(main())
