@@ -9,6 +9,7 @@ import machine
 from vl53l1x import VL53L1X
 from hts221 import HTS221
 from apds9960 import uAPDS9960 as APDS9960
+from bq27441 import BQ27441
 
 LED_RED = Pin("LED_RED", Pin.OUT_PP)
 LED_GREEN = Pin("LED_GREEN", Pin.OUT_PP)
@@ -24,6 +25,8 @@ i2c = I2C(1)
 DISTANCE = VL53L1X(i2c)
 SENSOR = HTS221(i2c)
 apds = APDS9960(i2c)
+
+fg = BQ27441(i2c)
 
 spi = SPI(1)
 dc = Pin("DATA_COMMAND_DISPLAY")

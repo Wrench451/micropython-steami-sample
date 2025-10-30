@@ -3,13 +3,13 @@ import uasyncio as asyncio
 import aioble
 import struct
 from time import ticks_ms
-from pins import *  # contient LED_RED, LED_GREEN, display
+from pins import *  # contient LED_RED, LED_GREEN, LED_BLUE, display, fg
 
 # === Initialisation BLE ===
 ble = bluetooth.BLE()
 ble.active(True)
 
-device_name = "STeaMi-R2"  # <- change en "STeaMi-R2" pour le 2e relay
+device_name = "STeaMi-R2"
 print("Device name:", device_name)
 
 # === Paramètres ===
@@ -17,8 +17,9 @@ SCAN_DURATION = 500
 ADV_TIMEOUT = 500
 
 # === Données globales ===
-devices_distances = {}  # {device_name: (distance, last_seen_ms)}
+devices_distances = {}   # {device_name: (distance, last_seen_ms)}
 forwarded_presence = None
+energy_value = 0.0       # Valeur mesurée de consommation énergétique
 
 # === Fonctions auxiliaires ===
 def advertising_payload(name=None, manufacturer_data=None):
@@ -60,7 +61,7 @@ async def ble_task():
                         devices_distances[name] = (distance, ticks_ms())
                         print(f"Received from {name}: {distance} cm")
                     if man_data and len(man_data) == 1 and name.startswith("STeaMi-R"):
-                        forwarded_presence, = struct.unpack("b", man_data) 
+                        forwarded_presence, = struct.unpack("b", man_data)
                         devices_distances[name] = (forwarded_presence, ticks_ms())
                         print(f"Received presence from {name}: {forwarded_presence}")
 
@@ -70,18 +71,17 @@ async def ble_task():
         if forwarded_presence is not None:
             print(f"{device_name} advertising presence: {forwarded_presence}")
 
-            # Allumer la LED selon la distance
-            if forwarded_presence == 0 :
-                man_data = struct.pack("b", 0)  # Commande LED RED ON
+            # Indicateur lumineux selon la présence
+            if forwarded_presence == 0:
+                man_data = struct.pack("b", 0)
                 LED_RED.on()
-            elif forwarded_presence == 1 :
-                man_data = struct.pack("b", 1)  # Commande LED GREEN ON
+            elif forwarded_presence == 1:
+                man_data = struct.pack("b", 1)
                 LED_GREEN.on()
             else:
-                man_data = struct.pack("b", 2)  # Commande LED BLUE ON
+                man_data = struct.pack("b", 2)
                 LED_BLUE.on()
 
-            # Encapsuler la donnée dans le payload
             adv_payload = advertising_payload(name=device_name, manufacturer_data=man_data)
 
             try:
@@ -104,9 +104,20 @@ async def ble_task():
 
 # === Tâche d’affichage ===
 async def display_task():
+    global energy_value
     while True:
+        # Lecture de la consommation énergétique
+        try:
+            energy_value = fg.current_average()
+        except Exception as e:
+            print("Erreur lecture énergie :", e)
+            energy_value = 0.0
+
         display.fill(0)
-        display.text(device_name, text_x_center(device_name), 20, 255)
+        display.text(device_name, text_x_center(device_name), 10, 255)
+
+        # Afficher la consommation d'énergie
+        display.text(f"E:{energy_value:.2f} mA", text_x_center("E:000.00 mA"), 25, 255)
 
         # Appareils récemment vus
         recent_devices = sorted(
@@ -115,13 +126,13 @@ async def display_task():
             reverse=True
         )[:4]
 
-        y = 40
+        y = 45
         for name, (dist, _) in recent_devices:
             display.text(f"{name[-4:]}: {dist}", text_x_center("XXXX: XXX"), y, 255)
             y += 10
 
         display.show()
-        await asyncio.sleep(0.2)
+        await asyncio.sleep(0.5)
 
 # === Programme principal ===
 async def main():

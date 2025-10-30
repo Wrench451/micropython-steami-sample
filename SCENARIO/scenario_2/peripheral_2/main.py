@@ -2,25 +2,22 @@ import bluetooth
 import uasyncio as asyncio
 import aioble
 import struct
-from time import ticks_ms, ticks_diff
-from pins import *  # Assure-toi que DISTANCE et display sont bien définis ici
+from time import ticks_ms
+from pins import *
 
-# === Initialisation BLE ===
 ble = bluetooth.BLE()
 ble.active(True)
 
-device_name = f"STeaMi-A"
+device_name = "STeaMi-A"
 print("Device name:", device_name)
 
-# === Paramètres du BLE ===
-SCAN_DURATION = 500  # Durée de la recherche en ms
-ADV_TIMEOUT = 500  # Durée de l'annonce en ms
+SCAN_DURATION = 500
+ADV_TIMEOUT = 500
 
-# === Données locales et des autres appareils ===
-devices_distances = {}  # {device_name: (distance, last_seen_ms)}
+devices_distances = {}
 forwarded_presence = None
+energy_current = 0
 
-# === Fonctions auxiliaires ===
 def advertising_payload(name=None, manufacturer_data=None):
     payload = bytearray()
     if name:
@@ -36,16 +33,14 @@ def extract_manufacturer_data(adv_bytes):
         length = adv_bytes[i]
         if length == 0:
             break
-        type_ = adv_bytes[i + 1]
-        if type_ == 0xFF:
-            return adv_bytes[i + 2 : i + 1 + length]
+        if adv_bytes[i + 1] == 0xFF:
+            return adv_bytes[i + 2:i + 1 + length]
         i += 1 + length
     return None
 
 def text_x_center(text):
     return max((128 - len(text) * 8) // 2, 0)
 
-# === Tâches ===
 async def ble_task():
     global forwarded_presence
     while True:
@@ -60,15 +55,11 @@ async def ble_task():
                         distance, = struct.unpack("h", man_data)
                         devices_distances[name] = (distance, ticks_ms())
                         print(f"Received from {name}: {distance} cm")
-                    if man_data and len(man_data) == 1 and name.startswith("STeaMi-R"):
-                        forwarded_presence_relay, = struct.unpack("b", man_data)
-                        devices_distances[name] = (forwarded_presence_relay, ticks_ms())
-                        if name.startswith("STeaMi-R2"):
-                            forwarded_presence = forwarded_presence_relay
-                        print(f"Received presence from {name}: {forwarded_presence_relay}")
+                    elif man_data and len(man_data) == 1 and name.startswith("STeaMi-R2"):
+                        forwarded_presence, = struct.unpack("b", man_data)
+                        devices_distances[name] = (forwarded_presence, ticks_ms())
 
-        # purge_old_devices()
-        await asyncio.sleep_ms(SCAN_DURATION+50)
+        await asyncio.sleep_ms(SCAN_DURATION + 50)
 
         if forwarded_presence is not None:
             if forwarded_presence == 0:
@@ -84,36 +75,35 @@ async def ble_task():
             LED_RED.off()
             LED_GREEN.off()
             LED_BLUE.off()
-            forwarded_presence = None  # Reset after indication
+            forwarded_presence = None
+
+async def energy_task():
+    global energy_current
+    while True:
+        try:
+            energy_current = fg.current_average()
+        except:
+            energy_current = 0
+        await asyncio.sleep(1)
 
 async def display_task():
     while True:
         display.fill(0)
-
-        # Nom de l'appareil + distance locale
-        display.text(device_name, text_x_center(device_name), 20, 255)
-
-        # Affichage des appareils les plus récemment vus
-        recent_devices = sorted(
-            devices_distances.items(),
-            key=lambda item: item[1][1],  # tri par last_seen_ms
-            reverse=True
-        )[:4]
-
-        y = 50
+        display.text(device_name, text_x_center(device_name), 10, 255)
+        recent_devices = sorted(devices_distances.items(), key=lambda x: x[1][1], reverse=True)[:4]
+        y = 40
         for name, (dist, _) in recent_devices:
             display.text(f"{name[-4:]}: {dist}", text_x_center("XXXX: XXX"), y, 255)
             y += 10
-
+        display.text(f"I: {energy_current:.1f} mA", text_x_center("I: XXXXX"), y+5, 255)
         display.show()
-        await asyncio.sleep(0.2)
-
-# === Programme principal ===
+        await asyncio.sleep(0.3)
 
 async def main():
     await asyncio.gather(
         ble_task(),
-        display_task()
+        display_task(),
+        energy_task()
     )
 
 asyncio.run(main())
